@@ -1,0 +1,62 @@
+---
+- hosts: all
+  sudo: True
+  
+  vars:
+    apt_upgrade: false
+    apt_install: [language-pack-zh-hant, vim, curl, wget, htop, tree, ntp]
+    user: vagrant
+    etcd_version: v2.0.9
+    etcd_platform: linux
+    etcd_arch: amd64
+    etcd_release: "etcd-{{ etcd_version }}-{{ etcd_platform }}-{{ etcd_arch }}"
+    etcd_download_url: "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/{{ etcd_release }}.tar.gz"
+    etcd_download_dir: /usr/local/src
+    etcd_dir: /usr/local/sbin
+    etcd_data_dir: /var/cache/etcd/state
+    etcd_cmd: "{{ etcd_dir }}/etcd"
+
+  roles:
+    - apt
+    - docker
+    - git
+#    - ohmyzsh
+#    - etcd
+
+  tasks:
+    - name: ensure ntpd is at the latest version
+      apt: name=ntp state=latest
+      notify:
+      - restart ntpd
+
+    - name: install zsh 
+      apt: name=zsh state=latest
+
+#    - name: install oh-my-zsh
+#      git: repo=https://github.com/robbyrussell/oh-my-zsh dest=~/.oh-my-zsh
+#      sudo: false  
+
+#    - name: checkout my dotfiles
+#      git: repo=https://github.com/metavige/dotfiles dest=~/dotfiles
+#      sudo: false
+
+#    - name: copy my zsh setting
+#      copy: src=~/dotfiles/.zshrc dest=~/.zshrc
+
+    - name: download etcd
+      get_url: url={{ etcd_download_url }} dest={{ etcd_download_dir }}/etcd.zip
+
+    - name: unarchive etcd
+      unarchive: copy=no
+        src={{ etcd_download_dir }}/etcd.zip
+        dest={{ etcd_download_dir }}
+
+    - name: copy binaries from archive into etcd dir
+      shell: rsync -auv {{ etcd_download_dir }}/{{ etcd_release }}/{{ item }} {{ etcd_dir }}
+      with_items:
+        - etcd
+        - etcdctl
+
+  handlers:
+    - name: restart ntpd
+      service: name=ntpd state=restarted
