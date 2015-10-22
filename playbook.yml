@@ -1,11 +1,13 @@
 ---
 - hosts: all
-  sudo: True
-  
+  remote_user: vagrant
+  sudo: true
+
   vars:
     apt_upgrade: false
-    apt_install: [language-pack-zh-hant, vim, curl, wget, htop, tree, ntp]
+    apt_install: [language-pack-zh-hant, vim, curl, wget, htop, tree, ntp, build-essential, libssl-dev, libffi-dev, python-dev]
     user: vagrant
+
     etcd_version: v2.0.9
     etcd_platform: linux
     etcd_arch: amd64
@@ -29,19 +31,21 @@
       notify:
       - restart ntpd
 
-    - name: install zsh 
+    - name: install zsh
       apt: name=zsh state=latest
 
-#    - name: install oh-my-zsh
-#      git: repo=https://github.com/robbyrussell/oh-my-zsh dest=~/.oh-my-zsh
-#      sudo: false  
+    - name: install oh-my-zsh
+      git: repo=https://github.com/robbyrussell/oh-my-zsh dest=~/.oh-my-zsh
+      sudo: false
 
-#    - name: checkout my dotfiles
-#      git: repo=https://github.com/metavige/dotfiles dest=~/dotfiles
-#      sudo: false
+    - name: copy my alias
+      copy: src=~/.aliases dest=~/.aliases
 
-#    - name: copy my zsh setting
-#      copy: src=~/dotfiles/.zshrc dest=~/.zshrc
+    - name: copy my zsh setting
+      copy: src=~/.zshrc dest=~/.zshrc
+
+    - name: copy my tmux setting
+      copy: src=~/.tmux.conf dest=~/.tmux.conf
 
     - name: download etcd
       get_url: url={{ etcd_download_url }} dest={{ etcd_download_dir }}/etcd.zip
