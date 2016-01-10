@@ -1,0 +1,51 @@
+---
+- hosts: all
+  remote_user: vagrant
+  sudo: true
+
+  pre_tasks:
+    - replace: dest=/etc/apt/sources.list regexp='us.archive.ubuntu.com' replace='free.nchc.org.tw' backup=yes
+    # - copy: src=files/etc/apt/ dest=/etc/apt/ directory_mode backup=yes
+    - copy: src=files/etc/docker/ dest=/etc/docker/ directory_mode backup=yes
+    # - apt: update_cache=yes cache_valid_time=3600
+
+  vars:
+    - apt_repository: deb http://apt.dockerproject.org/repo ubuntu-trusty main
+    - docker_compose_version: 1.5.2
+
+  roles:
+    - { role: apt, apt_upgrade: false, apt_install: [vim, curl, wget, tmux, tree, ntp, git, openssl] }
+    - { role: docker, docker_user: vagrant }
+
+  tasks:
+    - name: change locale
+      locale_gen: name=zh_TW.UTF-8 state=present
+
+    - name: Update /etc/hosts
+      lineinfile: dest=/etc/hosts regexp='.*registry.co$' line='192.168.0.103 registry.co' state=present
+
+    - name: install docker-compose
+      get_url: url=https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64 dest=/usr/local/bin/docker-compose mode=0755
+
+    - name: clone bash environment
+      git: repo=https://github.com/metavige/dotfiles.git dest=~/dotfiles update=no
+      sudo: false
+      notify:
+      - sync bash environment
+
+    # - name: copy my zsh theme setting
+    #   copy: src=metavige-agnoster.zsh-theme dest=/home/vagrant/.oh-my-zsh/themes/metavige-agnoster.zsh-theme
+
+  handlers:
+    - name: docker login
+      command: docker login -u 99122010 -p 99122010 -e ricky.chiang@quantatw.com registry.co
+      sudo: false
+
+    - name: set sync.sh
+      file: path=~/iot/sync.sh state=file mode=0755
+      sudo: false
+
+    - name: sync bash environment
+      shell: ~/dotfiles/sync.sh -f
+      sudo: false
+

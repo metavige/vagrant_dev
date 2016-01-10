@@ -1,0 +1,8 @@
+---
+- src: kosssi.apt
+  name: apt
+  path: roles/
+
+- src: amidos.install-docker
+  name: docker
+  path: roles/
