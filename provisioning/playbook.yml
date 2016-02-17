@@ -1,12 +1,12 @@
 ---
 - hosts: all
   remote_user: vagrant
-  sudo: true
+  become_method: sudo
 
   pre_tasks:
     - replace: dest=/etc/apt/sources.list regexp='us.archive.ubuntu.com' replace='free.nchc.org.tw' backup=yes
-    # - copy: src=files/etc/apt/ dest=/etc/apt/ directory_mode backup=yes
-    - copy: src=files/etc/docker/ dest=/etc/docker/ directory_mode backup=yes
+    - copy: src=files/etc/apt/ dest=/etc/apt/ backup=yes
+    # - copy: src=files/etc/docker/ dest=/etc/docker/ directory_mode backup=yes
     # - apt: update_cache=yes cache_valid_time=3600
 
   vars:
@@ -14,7 +14,7 @@
     - docker_compose_version: 1.5.2
 
   roles:
-    - { role: apt, apt_upgrade: false, apt_install: [vim, curl, wget, tmux, tree, ntp, git, openssl] }
+    - { role: apt, apt_upgrade: false, apt_install: [vim, curl, wget, tmux, htop, tree, ntp, git, openssl] }
     - { role: docker, docker_user: vagrant }
 
   tasks:
@@ -24,28 +24,31 @@
     - name: Update /etc/hosts
       lineinfile: dest=/etc/hosts regexp='.*registry.co$' line='192.168.0.103 registry.co' state=present
 
+    - name: mkdir certs
+      file: path=/etc/docker/certs.d/registry.co state=directory
+
+    - name: download registry.co SSL
+      shell: openssl s_client -showcerts -connect registry.co:443 </dev/null 2>/dev/null | openssl x509 -outform PEM > /etc/docker/certs.d/registry.co/ca.crt
+
     - name: install docker-compose
       get_url: url=https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64 dest=/usr/local/bin/docker-compose mode=0755
 
+    - name: mkdir certs
+      file: path=~/.docker state=directory
+      become: false
+
+    - name: docker login
+      command: docker login -u 99122010 -p 99122010 -e ricky.chiang@quantatw.com registry.co
+      become: false
+
     - name: clone bash environment
       git: repo=https://github.com/metavige/dotfiles.git dest=~/dotfiles update=no
-      sudo: false
+      become: false
       notify:
       - sync bash environment
 
-    # - name: copy my zsh theme setting
-    #   copy: src=metavige-agnoster.zsh-theme dest=/home/vagrant/.oh-my-zsh/themes/metavige-agnoster.zsh-theme
-
   handlers:
-    - name: docker login
-      command: docker login -u 99122010 -p 99122010 -e ricky.chiang@quantatw.com registry.co
-      sudo: false
-
-    - name: set sync.sh
-      file: path=~/iot/sync.sh state=file mode=0755
-      sudo: false
-
     - name: sync bash environment
       shell: ~/dotfiles/sync.sh -f
-      sudo: false
+      become: false
 

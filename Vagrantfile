@@ -6,7 +6,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "private_network", ip: "172.17.8.200"
 
   config.vm.provider :virtualbox do |vb|
-    vb.memory = 2048
+    vb.memory = 8192
   end
 
   config.vm.synced_folder "~/workspace", "/home/vagrant/workspace"
@@ -14,6 +14,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "provisioning/playbook.yml"
+    ansible.sudo = true
   end
 
 end
